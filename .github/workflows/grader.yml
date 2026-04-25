@@ -1,0 +1,206 @@
+name: Grader
+
+on:
+  push:
+    branches-ignore:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  grade:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: starter-code/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --prefix starter-code
+
+      # ── ESLint ────────────────────────────────────────────────────────────
+      - name: Run ESLint
+        id: lint_violations
+        run: |
+          cd starter-code
+          LINT_OUTPUT=$(npx eslint js/ --format=json 2>/dev/null || true)
+          ERRORS=$(echo "$LINT_OUTPUT" | python3 -c "
+          import json, sys
+          try:
+              results = json.load(sys.stdin)
+              total = sum(r.get('errorCount', 0) for r in results)
+              print(total)
+          except Exception:
+              print(0)
+          ")
+          echo "ESLint errors: $ERRORS"
+          if [ "$ERRORS" -eq 0 ]; then
+            echo "score=1.0" >> "$GITHUB_OUTPUT"; echo "passed=true" >> "$GITHUB_OUTPUT"
+            echo "✅ 0 ESLint errors"
+          else
+            SCORE=$(python3 -c "print(max(0.0, round(1 - $ERRORS * 0.05, 2)))")
+            echo "score=$SCORE" >> "$GITHUB_OUTPUT"; echo "passed=false" >> "$GITHUB_OUTPUT"
+            echo "❌ $ERRORS ESLint error(s)"
+          fi
+
+      # ── Cyclomatic complexity ─────────────────────────────────────────────
+      - name: Check cyclomatic complexity
+        id: cyclomatic_complexity
+        run: |
+          cd starter-code
+          CC_OUTPUT=$(npx eslint js/ \
+            --rule '{"complexity": ["error", 10]}' \
+            --format=json 2>/dev/null || true)
+          CC_ERRORS=$(echo "$CC_OUTPUT" | python3 -c "
+          import json, sys
+          try:
+              results = json.load(sys.stdin)
+              total = sum(
+                  sum(1 for m in r.get('messages', []) if m.get('ruleId') == 'complexity')
+                  for r in results
+              )
+              print(total)
+          except Exception:
+              print(0)
+          ")
+          echo "CC violations: $CC_ERRORS"
+          if [ "$CC_ERRORS" -eq 0 ]; then
+            echo "score=1.0" >> "$GITHUB_OUTPUT"; echo "passed=true" >> "$GITHUB_OUTPUT"
+            echo "✅ All functions within CC ≤ 10"
+          else
+            SCORE=$(python3 -c "print(max(0.0, round(1 - $CC_ERRORS * 0.1, 2)))")
+            echo "score=$SCORE" >> "$GITHUB_OUTPUT"; echo "passed=false" >> "$GITHUB_OUTPUT"
+            echo "❌ $CC_ERRORS function(s) exceed CC 10"
+          fi
+
+      # ── Error handler presence ────────────────────────────────────────────
+      - name: Check error handler presence
+        id: error_handler_presence
+        run: |
+          API_FILE="starter-code/js/api.js"
+          if grep -qE "\.catch\(|try\s*\{|catch\s*\(" "$API_FILE" 2>/dev/null; then
+            echo "score=1.0" >> "$GITHUB_OUTPUT"; echo "passed=true" >> "$GITHUB_OUTPUT"
+            echo "✅ Error handler found in api.js"
+          else
+            echo "score=0.0" >> "$GITHUB_OUTPUT"; echo "passed=false" >> "$GITHUB_OUTPUT"
+            echo "❌ No error handler found in api.js"
+          fi
+
+      # ── E2E tests presence ────────────────────────────────────────────────
+      - name: Check E2E tests presence
+        id: e2e_tests_presence
+        run: |
+          E2E_DIR="starter-code/tests/e2e"
+          # Has a real test (not just test.skip)
+          REAL_TESTS=$(grep -rE "^\s*test\s*\(" "$E2E_DIR" 2>/dev/null \
+            | grep -v "test\.skip" | wc -l)
+          echo "Real E2E tests: $REAL_TESTS"
+          if [ "$REAL_TESTS" -gt 0 ]; then
+            echo "score=1.0" >> "$GITHUB_OUTPUT"; echo "passed=true" >> "$GITHUB_OUTPUT"
+            echo "✅ $REAL_TESTS real E2E test(s) found"
+          else
+            echo "score=0.0" >> "$GITHUB_OUTPUT"; echo "passed=false" >> "$GITHUB_OUTPUT"
+            echo "❌ No implemented E2E tests found (only stubs)"
+          fi
+
+      # ── Build ─────────────────────────────────────────────────────────────
+      - name: Build with Vite
+        run: |
+          cd starter-code
+          npm run build
+
+      # ── Start preview server ──────────────────────────────────────────────
+      - name: Start preview server
+        run: |
+          cd starter-code
+          npm run preview &
+          echo $! > /tmp/vite-pid
+          sleep 5
+          curl -sf http://localhost:4173 > /dev/null && echo "✅ Preview server running" || echo "⚠️ Server may not be ready"
+
+      # ── Lighthouse ────────────────────────────────────────────────────────
+      - name: Install Lighthouse
+        run: npm install -g lighthouse --quiet
+
+      - name: Run Lighthouse
+        id: lighthouse
+        run: |
+          lighthouse http://localhost:4173 \
+            --output=json \
+            --output-path=/tmp/lh-report.json \
+            --chrome-flags="--headless --no-sandbox --disable-dev-shm-usage" \
+            --only-categories=performance,accessibility \
+            --quiet \
+            2>/dev/null || true
+
+          if [ -f /tmp/lh-report.json ]; then
+            PERF=$(python3 -c "
+          import json
+          try:
+              d = json.load(open('/tmp/lh-report.json'))
+              print(round(d['categories']['performance']['score'] * 100))
+          except Exception:
+              print(0)
+          ")
+            A11Y=$(python3 -c "
+          import json
+          try:
+              d = json.load(open('/tmp/lh-report.json'))
+              print(round(d['categories']['accessibility']['score'] * 100))
+          except Exception:
+              print(0)
+          ")
+          else
+            PERF=0; A11Y=0
+            echo "⚠️ Lighthouse report not generated"
+          fi
+
+          echo "Performance: $PERF | Accessibility: $A11Y"
+          echo "perf_score=$(python3 -c "print(f'{$PERF/100:.2f}')")" >> "$GITHUB_OUTPUT"
+          echo "perf_passed=$([ "$PERF" -ge 85 ] && echo "true" || echo "false")" >> "$GITHUB_OUTPUT"
+          echo "a11y_score=$(python3 -c "print(f'{$A11Y/100:.2f}')")" >> "$GITHUB_OUTPUT"
+          echo "a11y_passed=$([ "$A11Y" -ge 90 ] && echo "true" || echo "false")" >> "$GITHUB_OUTPUT"
+
+      # ── Stop preview server ───────────────────────────────────────────────
+      - name: Stop preview server
+        if: always()
+        run: |
+          [ -f /tmp/vite-pid ] && kill "$(cat /tmp/vite-pid)" 2>/dev/null || true
+
+      # ── Grader report ─────────────────────────────────────────────────────
+      - name: Build grader report
+        run: |
+          cat > grader-report.json << EOF
+          {
+            "schemaVersion": "1.0",
+            "templateSlug": "cv-spa-jquery-rest",
+            "runId": "${{ github.run_id }}",
+            "sha": "${{ github.sha }}",
+            "metrics": [
+              { "metricKey": "lighthouse_performance",   "score": ${{ steps.lighthouse.outputs.perf_score }},             "passed": ${{ steps.lighthouse.outputs.perf_passed }},             "unavailable": false },
+              { "metricKey": "lighthouse_accessibility", "score": ${{ steps.lighthouse.outputs.a11y_score }},             "passed": ${{ steps.lighthouse.outputs.a11y_passed }},             "unavailable": false },
+              { "metricKey": "lint_violations",          "score": ${{ steps.lint_violations.outputs.score }},             "passed": ${{ steps.lint_violations.outputs.passed }},             "unavailable": false },
+              { "metricKey": "error_handler_presence",   "score": ${{ steps.error_handler_presence.outputs.score }},      "passed": ${{ steps.error_handler_presence.outputs.passed }},      "unavailable": false },
+              { "metricKey": "e2e_tests_presence",       "score": ${{ steps.e2e_tests_presence.outputs.score }},          "passed": ${{ steps.e2e_tests_presence.outputs.passed }},          "unavailable": false },
+              { "metricKey": "cyclomatic_complexity",    "score": ${{ steps.cyclomatic_complexity.outputs.score }},       "passed": ${{ steps.cyclomatic_complexity.outputs.passed }},       "unavailable": false }
+            ]
+          }
+          EOF
+          cat grader-report.json
+
+      - name: Upload grader report
+        uses: actions/upload-artifact@v4
+        with:
+          name: grader-report
+          path: grader-report.json

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Posts SPA — JSONPlaceholder</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+<header>
+    <h1>Posts</h1>
+</header>
+
+<main id="app">
+    <!-- Search bar -->
+    <section class="search-section" aria-label="Búsqueda de posts">
+        <label for="search-input" class="visually-hidden">Buscar por título</label>
+        <input
+            type="search"
+            id="search-input"
+            placeholder="Buscar por título…"
+            autocomplete="off"
+            aria-label="Buscar por título"
+        >
+        <p id="result-count" aria-live="polite" aria-atomic="true"></p>
+    </section>
+
+    <!-- Loading spinner -->
+    <div id="spinner" role="status" aria-label="Cargando…" hidden>
+        <div class="spinner-ring" aria-hidden="true"></div>
+        <span class="visually-hidden">Cargando posts…</span>
+    </div>
+
+    <!-- Error state -->
+    <div id="error-message" role="alert" hidden>
+        <p id="error-text"></p>
+        <button id="retry-btn" type="button">Reintentar</button>
+    </div>
+
+    <!-- Posts grid -->
+    <section id="posts-container" aria-label="Lista de posts">
+        <!-- Post cards are injected here by ui.js -->
+    </section>
+
+    <!-- Pagination -->
+    <nav id="pagination" aria-label="Paginación" hidden>
+        <button id="prev-btn" type="button" aria-label="Página anterior">← Anterior</button>
+        <span id="page-indicator" aria-current="page"></span>
+        <button id="next-btn" type="button" aria-label="Página siguiente">Siguiente →</button>
+    </nav>
+
+    <!-- Post detail (shown when a card is clicked) -->
+    <section id="post-detail" aria-label="Detalle del post" hidden>
+        <button id="back-btn" type="button">← Volver a la lista</button>
+        <div id="post-detail-content">
+            <!-- Populated by ui.js -->
+        </div>
+    </section>
+</main>
+
+<script type="module" src="/js/main.js"></script>
+</body>
+</html>

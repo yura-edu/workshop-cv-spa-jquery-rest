@@ -1,0 +1,231 @@
+/* ── Reset & base ─────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+    font-family: system-ui, -apple-system, sans-serif;
+    margin: 0;
+    background: #f4f4f8;
+    color: #1a1a2e;
+    min-height: 100vh;
+}
+
+/* ── Accessibility ────────────────────────────────────────────────────────── */
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+}
+
+/* ── Header ───────────────────────────────────────────────────────────────── */
+header {
+    background: #1a1a2e;
+    color: #fff;
+    padding: 1.25rem 2rem;
+}
+
+header h1 {
+    margin: 0;
+    font-size: 1.5rem;
+    letter-spacing: -.01em;
+}
+
+/* ── Main layout ──────────────────────────────────────────────────────────── */
+#app {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 1.5rem 1rem 3rem;
+}
+
+/* ── Search ───────────────────────────────────────────────────────────────── */
+.search-section {
+    margin-bottom: 1.5rem;
+}
+
+#search-input {
+    width: 100%;
+    padding: .6rem .9rem;
+    font-size: 1rem;
+    border: 2px solid #ccc;
+    border-radius: 6px;
+    transition: border-color .15s;
+}
+
+#search-input:focus {
+    outline: none;
+    border-color: #1a1a2e;
+}
+
+#result-count {
+    margin: .5rem 0 0;
+    font-size: .875rem;
+    color: #555;
+}
+
+/* ── Spinner ──────────────────────────────────────────────────────────────── */
+#spinner {
+    display: flex;
+    justify-content: center;
+    padding: 3rem 0;
+}
+
+.spinner-ring {
+    width: 48px;
+    height: 48px;
+    border: 5px solid #e0e0e0;
+    border-top-color: #1a1a2e;
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Error ────────────────────────────────────────────────────────────────── */
+#error-message {
+    background: #fee;
+    border: 1px solid #fcc;
+    border-radius: 6px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+#error-message p {
+    margin: 0;
+    color: #900;
+    flex: 1;
+}
+
+#retry-btn {
+    padding: .4rem .9rem;
+    background: #c00;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: .9rem;
+}
+
+#retry-btn:hover { background: #900; }
+
+/* ── Posts grid ───────────────────────────────────────────────────────────── */
+#posts-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.post-card {
+    background: #fff;
+    border-radius: 8px;
+    padding: 1.25rem;
+    box-shadow: 0 1px 4px rgba(0,0,0,.08);
+    cursor: pointer;
+    transition: box-shadow .15s, transform .15s;
+    border: 2px solid transparent;
+}
+
+.post-card:hover,
+.post-card:focus {
+    box-shadow: 0 4px 12px rgba(0,0,0,.12);
+    transform: translateY(-2px);
+    border-color: #1a1a2e;
+    outline: none;
+}
+
+.post-card h2 {
+    margin: 0 0 .5rem;
+    font-size: 1rem;
+    line-height: 1.4;
+}
+
+.post-card p {
+    margin: 0;
+    font-size: .875rem;
+    color: #555;
+    line-height: 1.5;
+}
+
+/* ── Pagination ───────────────────────────────────────────────────────────── */
+#pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+#pagination button {
+    padding: .5rem 1.1rem;
+    background: #1a1a2e;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: .9rem;
+}
+
+#pagination button:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+#page-indicator {
+    font-weight: 600;
+    min-width: 80px;
+    text-align: center;
+}
+
+/* ── Post detail ──────────────────────────────────────────────────────────── */
+#post-detail {
+    background: #fff;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 1px 4px rgba(0,0,0,.08);
+}
+
+#back-btn {
+    background: none;
+    border: none;
+    color: #1a1a2e;
+    cursor: pointer;
+    font-size: .9rem;
+    padding: 0;
+    margin-bottom: 1.25rem;
+    text-decoration: underline;
+}
+
+#post-detail-content h2 {
+    margin: 0 0 1rem;
+}
+
+.comments-section {
+    margin-top: 2rem;
+    border-top: 1px solid #e8e8e8;
+    padding-top: 1.5rem;
+}
+
+.comment {
+    padding: .75rem 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.comment:last-child { border-bottom: none; }
+
+.comment-name {
+    font-weight: 600;
+    font-size: .875rem;
+    margin: 0 0 .25rem;
+}
+
+.comment-body {
+    margin: 0;
+    font-size: .875rem;
+    color: #444;
+}
