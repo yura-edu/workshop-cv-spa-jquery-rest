@@ -1,0 +1,73 @@
+# yura.workshop.yaml — declarative grader config
+# Spec: docs/grader-workers-spec.md §6
+# Generated from prisma/seeds/workshop-templates.seed.ts
+
+schema_version: "1.0"
+workshop:
+  id: cv-spa-jquery-rest
+  title: "SPA con JavaScript y consumo de API REST"
+  type: code_quality
+  language: typescript
+  passing_threshold: 70
+  base_branch: main
+submission:
+  source: workshop_link
+  required_inputs:
+    - type: github_repo_url
+      label: "URL del repositorio"
+      required: true
+evaluation_profile:
+  - metric_id: lighthouse_performance_score
+    weight: 20
+    threshold: 0.85
+    config:
+      min_score: 0.85
+      category: performance
+  - metric_id: lighthouse_accessibility_score
+    weight: 20
+    threshold: 0.9
+    config:
+      min_score: 0.9
+      category: accessibility
+  - metric_id: api_error_handling_present
+    weight: 20
+    threshold: 1
+    config:
+      patterns:
+        - try/catch
+        - ".catch("
+        - "fetch.*\\.then"
+  - metric_id: e2e_test_presence
+    weight: 15
+    threshold: 1
+    config:
+      paths:
+        - tests/e2e/
+        - e2e/
+        - "playwright.config.*"
+      match_mode: any
+  - metric_id: cyclomatic_complexity
+    weight: 15
+    threshold: 10
+    config:
+      tool: eslint-complexity
+      max_per_function: 10
+      aggregation: avg
+      include_paths:
+        - src/
+      exclude_paths:
+        - tests/
+        - "**/__init__.py"
+        - "**/*.test.ts"
+        - "**/*.spec.ts"
+      timeout_seconds: 120
+  - metric_id: lint_violations
+    weight: 10
+    threshold: 0
+    config:
+      tool: eslint
+      severity_levels:
+        - error
+        - warning
+      fail_on: error
+      max_violations: 0
